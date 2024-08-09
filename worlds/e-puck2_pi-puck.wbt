@@ -1,0 +1,195 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/factory/containers/protos/WoodenBox.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/gctronic/e-puck/protos/E-puck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/gctronic/e-puck/protos/Pi-puck.proto"
+
+WorldInfo {
+  info [
+    "The model of the e-puck 2 robot with a Pi-Puck extension"
+  ]
+  title "e-puck simulation"
+}
+Viewpoint {
+  orientation -0.3500734069125635 0.1296348239354801 0.9277086946859169 2.8594753200265814
+  position 3.1057041902874927 -1.2022286845858736 2.924110039716504
+  follow "e-puck2"
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 2 2
+}
+DEF puck E-puck {
+  translation -0.134951 0.525505 -0.000379205
+  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  name "e-puck2(5)"
+  controller "python_controller"
+  controllerArgs [
+    ""
+  ]
+  supervisor TRUE
+  version "2"
+  camera_width 320
+  camera_height 240
+  receiver_channel 6
+  turretSlot [
+    GPS {
+    }
+    Pi-puck {
+    }
+  ]
+}
+DEF puck E-puck {
+  translation 0.05248 -0.102507 -0.000379205
+  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  name "e-puck2(4)"
+  controller "python_controller"
+  controllerArgs [
+    ""
+  ]
+  supervisor TRUE
+  version "2"
+  camera_width 320
+  camera_height 240
+  receiver_channel 5
+  turretSlot [
+    GPS {
+    }
+    Pi-puck {
+    }
+  ]
+}
+DEF puck E-puck {
+  translation -0.390932 0.268266 0.000402856
+  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  name "e-puck2(3)"
+  controller "python_controller"
+  controllerArgs [
+    ""
+  ]
+  supervisor TRUE
+  version "2"
+  camera_width 320
+  camera_height 240
+  receiver_channel 4
+  turretSlot [
+    GPS {
+    }
+    Pi-puck {
+    }
+  ]
+}
+DEF puck E-puck {
+  translation 0.33372 0.528872 -5.72129e-05
+  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  name "e-puck2(2)"
+  controller "python_controller"
+  controllerArgs [
+    ""
+  ]
+  supervisor TRUE
+  version "2"
+  camera_width 320
+  camera_height 240
+  receiver_channel 3
+  turretSlot [
+    GPS {
+    }
+    Pi-puck {
+    }
+  ]
+}
+E-puck {
+  translation 0.16185 -0.548276 -0.000379205
+  rotation -0.0008121623278961846 -0.007276381173966691 0.999973196975481 -0.21833653140406284
+  name "e-puck2(1)"
+  controller "python_controller"
+  controllerArgs [
+    ""
+  ]
+  supervisor TRUE
+  version "2"
+  camera_width 320
+  camera_height 240
+  receiver_channel 2
+  turretSlot [
+    GPS {
+    }
+    Pi-puck {
+    }
+  ]
+}
+Robot {
+  children [
+    Receiver {
+      channel 1
+    }
+    Emitter {
+      channel 1
+    }
+  ]
+  name "supervisorRobot"
+  controller "supervisor_python_controller"
+  supervisor TRUE
+}
+DEF BOX WoodenBox {
+  translation -0.683174 0.2 0.05
+  rotation 0 0 1 0.5
+  size 0.1 0.1 0.1
+}
+DEF NEWBOX WoodenBox {
+  translation 0.53 -0.48 0.05
+  name "wooden box(5)"
+  size 0.1 0.1 0.1
+}
+WoodenBox {
+  translation 0.35 0.75 0.05
+  rotation 0 0 1 4.96782
+  name "wooden box(1)"
+  size 0.1 0.1 0.1
+}
+WoodenBox {
+  translation -0.35471 -0.5 0.05
+  rotation 0 0 1 5.36782
+  name "wooden box(2)"
+  size 0.1 0.1 0.1
+}
+WoodenBox {
+  translation 0.336216 0.281715 0.05
+  rotation 0 0 1 5.36782
+  name "wooden box(3)"
+  size 0.1 0.1 0.1
+}
+WoodenBox {
+  translation -0.66 0.65 0.05
+  rotation 0 0 1 5.36782
+  name "wooden box(4)"
+  size 0.1 0.1 0.1
+}
+DEF puck E-puck {
+  hidden linearVelocity_0 0.017734893723936968 -0.003079062090172067 -2.0517519664730114e-11
+  hidden angularVelocity_0 -1.151071986893956e-08 1.2447712139552052e-08 0.07029813606193129
+  translation -0.2969507164240214 -0.31317876764459834 -6.012661997007243e-05
+  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  name "e-puck2"
+  controller "python_controller"
+  controllerArgs [
+    ""
+  ]
+  supervisor TRUE
+  version "2"
+  camera_width 320
+  camera_height 240
+  turretSlot [
+    GPS {
+    }
+    Pi-puck {
+    }
+  ]
+}
