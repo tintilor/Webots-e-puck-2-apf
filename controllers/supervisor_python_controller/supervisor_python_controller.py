@@ -1,4 +1,5 @@
 from controller import Supervisor
+import json
 
 def find_all_wooden_boxes(node, boxes):
     if node.getTypeName() == 'WoodenBox':
@@ -75,19 +76,30 @@ while supervisor.step(timestep) != -1:
             # Filter out the current robot's position
             filtered_positions = {ch: pos for ch, pos in robot_position_dict.items() if ch != channel}
     
-            # Construct the message
-            message = "Boxes:" + ";".join(f"{pos[0]},{pos[1]},{pos[2]}" for pos in box_positions)
-            message += " | Robots:" + ";".join(f"{pos[0]},{pos[1]},{pos[2]}" for pos in filtered_positions.values())
+            # Construct the JSON message
+            message = {
+                "Boxes": [{"x": pos[0], "y": pos[1], "z": pos[2]} for pos in box_positions],
+                "Robots": [{"x": pos[0], "y": pos[1], "z": pos[2]} for pos in filtered_positions.values()],
+                "Current": {
+                    "position": {
+                        "x": robot_position_dict[channel][0],
+                        "y": robot_position_dict[channel][1],
+                        "z": robot_position_dict[channel][2]
+                    },
+                    "rotation": {
+                        "x": robot_rotation_dict[channel][0],
+                        "y": robot_rotation_dict[channel][1],
+                        "z": robot_rotation_dict[channel][2],
+                        "w": robot_rotation_dict[channel][3]
+                    }
+                }
+            }
     
-            # Add the current robot's position and rotation
-            current_pos = robot_position_dict[channel]
-            current_rot = robot_rotation_dict[channel]
-            message += f" | Current:{current_pos[0]},{current_pos[1]},{current_pos[2]},{current_rot[0]},{current_rot[1]},{current_rot[2]},{current_rot[3]}"
-    
-            # Set the emitter channel and send the message
+            # Convert the message to JSON string and send
+            json_message = json.dumps(message)
             emitter.setChannel(channel)
-            emitter.send(message.encode('utf-8'))
+            emitter.send(json_message.encode('utf-8'))
 
-            print(f"Sent data to channel {channel}: {message}")
+            print(f"Sent JSON data to channel {channel}: {json_message}")
 
         last_send_time = current_time

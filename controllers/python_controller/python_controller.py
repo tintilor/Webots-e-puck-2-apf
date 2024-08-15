@@ -2,6 +2,7 @@ from controller import Robot, Receiver
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 class RobotController:
     def __init__(self):
@@ -128,39 +129,22 @@ class RobotController:
 
 
     def process_message(self, message):
-        sections = message.split(" | ")
-
-        if len(sections) == 3:
-            box_data = sections[0].replace("Boxes:", "")
-            robot_data = sections[1].replace("Robots:", "")
-            current_data = sections[2].replace("Current:", "")
-
-            box_positions = self.parse_positions(box_data)
-            robot_positions = self.parse_positions(robot_data)
-            current_position, current_rotation = self.parse_current_position(current_data)
-            
-            return box_positions, robot_positions, current_position, current_rotation
-
-        return [], [], [], 0
-
-    def parse_positions(self, data):
-        positions = []
-        if data:
-            for pos_str in data.split(";"):
-                pos = list(map(float, pos_str.split(",")))
-                if len(pos) == 3:
-                    positions.append(pos)
-                else:
-                    print(f"Invalid position: {pos}")
-        return positions
-
-    def parse_current_position(self, data):
-        current_pos_rot = list(map(float, data.split(",")))
-        if len(current_pos_rot) >= 4:
-            return current_pos_rot[:3], current_pos_rot[5]*current_pos_rot[6]
-        else:
-            print(f"Invalid current position and rotation data: {current_pos_rot}")
-            return [], 0
+        # Load JSON message
+        data = json.loads(message)
+        
+        # Parse positions and rotations
+        box_positions = [(box['x'], box['y'], box['z']) for box in data.get("Boxes", [])]
+        robot_positions = [(robot['x'], robot['y'], robot['z']) for robot in data.get("Robots", [])]
+        current_position = (
+            data["Current"]["position"]["x"], 
+            data["Current"]["position"]["y"], 
+            data["Current"]["position"]["z"]
+        )
+        current_rotation = (
+            data["Current"]["rotation"]["z"] * data["Current"]["rotation"]["w"]
+        )
+        
+        return box_positions, robot_positions, current_position, current_rotation
 
     def update_motors(self, left_velocity, right_velocity):
         self.left_motor.setVelocity(left_velocity)
