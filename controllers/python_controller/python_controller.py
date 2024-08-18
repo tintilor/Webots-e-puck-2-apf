@@ -25,6 +25,8 @@ class RobotController:
             'BOX_REPELLING_RADIUS': 0.5,
             'WALL_REPULSIVE_GAIN': 20.0,
             'WALL_REPELLING_RADIUS': 0.5,
+            'GOAL_ATTRACTIVE_GAIN': 50.0,
+            'GOAL_ATTRACTIVE_RADIUS': 0.8,
             'MAX_VELOCITY': 6.28,
             'MAX_FORCE': 2.0,
             'DAMPING_FACTOR': 0.1,
@@ -64,7 +66,7 @@ class RobotController:
                 force_y += force_magnitude * (dy / distance)
         return force_x, force_y
 
-    def wall_repulsive_potential(self, walls, current_position):
+    def wall_repulsive_potential(self, walls, current_position, radius):
         force_x, force_y = 0.0, 0.0
         for wall in walls:
             (x1, y1, _), (x2, y2, _) = wall
@@ -79,12 +81,23 @@ class RobotController:
             dx = current_position[0] - closest_x
             dy = current_position[1] - closest_y
             distance = math.hypot(dx, dy)
-            if distance < self.params['WALL_REPELLING_RADIUS']:
-                force_magnitude = self.params['WALL_REPULSIVE_GAIN'] * (self.params['WALL_REPELLING_RADIUS'] - distance) ** 2 / (distance ** 2 + 1e-6)
+            if distance < radius:
+                force_magnitude = self.params['WALL_REPULSIVE_GAIN'] * (radius - distance) ** 2 / (distance ** 2 + 1e-6)
                 force_x += force_magnitude * (dx / distance)
                 force_y += force_magnitude * (dy / distance)
         return force_x, force_y
 
+    def attractive_potential_from_goals(self, goals, current_position, radius):
+        force_x, force_y = 0.0, 0.0
+        for goal in goals:
+            dx = goal[0] - current_position[0]
+            dy = goal[1] - current_position[1]
+            distance = math.hypot(dx, dy)
+            if distance < radius:
+                force_magnitude = self.params['GOAL_ATTRACTIVE_GAIN'] * distance
+                force_x += force_magnitude * (dx / distance)
+                force_y += force_magnitude * (dy / distance)
+        return force_x, force_y
 
     def compute_velocities_from_forces(self, force_x, force_y, robot_rotation):
         # Parameters
@@ -95,14 +108,12 @@ class RobotController:
         theta = robot_rotation
         
         # Define the rotation matrix for converting global forces to local frame
-
         R = np.array([
                 [math.cos(theta), -math.sin(theta)],
                 [math.sin(theta),  math.cos(theta)]
             ])
         invR = np.linalg.inv(R)    
         # Global force vector
-
         global_force = np.array([force_x, force_y])
         
         # Transform global forces to local frame using the rotation matrix
@@ -122,11 +133,8 @@ class RobotController:
         # Clamp the velocities
         left_velocity = np.clip(left_velocity, -max_velocity, max_velocity)
         right_velocity = np.clip(right_velocity, -max_velocity, max_velocity)
-        print("global: ",global_force)
-        print("local: ",local_force)
+        
         return left_velocity, right_velocity
-    
-
 
     def process_message(self, message):
         # Load JSON message
@@ -135,6 +143,7 @@ class RobotController:
         # Parse positions and rotations
         box_positions = [(box['x'], box['y'], box['z']) for box in data.get("Boxes", [])]
         robot_positions = [(robot['x'], robot['y'], robot['z']) for robot in data.get("Robots", [])]
+        goal_positions = [(goal['x'], goal['y']) for goal in data.get("Goals", [])]  # Extract goals from message
         current_position = (
             data["Current"]["position"]["x"], 
             data["Current"]["position"]["y"], 
@@ -144,13 +153,13 @@ class RobotController:
             data["Current"]["rotation"]["z"] * data["Current"]["rotation"]["w"]
         )
         
-        return box_positions, robot_positions, current_position, current_rotation
+        return box_positions, robot_positions, goal_positions, current_position, current_rotation
 
     def update_motors(self, left_velocity, right_velocity):
         self.left_motor.setVelocity(left_velocity)
         self.right_motor.setVelocity(right_velocity)
 
-    def plot_apf_2d(self, repulsive_positions, box_positions, wall_positions, current_position):
+    def plot_apf_2d(self, repulsive_positions, box_positions, wall_positions, current_position, goal_positions):
         x = np.linspace(-1.5, 1.5, 20)
         y = np.linspace(-1.5, 1.5, 20)
         X, Y = np.meshgrid(x, y)
@@ -163,8 +172,9 @@ class RobotController:
                 fx_repulsive_robots, fy_repulsive_robots = self.repulsive_potential_from_robots(repulsive_positions, pos, self.params['ROBOT_REPELLING_RADIUS'])
                 fx_repulsive_boxes, fy_repulsive_boxes = self.repulsive_potential_from_boxes(box_positions, pos, self.params['BOX_REPELLING_RADIUS'])
                 fx_wall, fy_wall = self.wall_repulsive_potential(self.WALLS, pos)
-                U_repulsive[i, j] = fx_repulsive_robots + fx_repulsive_boxes + fx_wall
-                V_repulsive[i, j] = fy_repulsive_robots + fy_repulsive_boxes + fy_wall
+                fx_attractive, fy_attractive = self.attractive_potential_from_goals(goal_positions, pos)
+                U_repulsive[i, j] = fx_repulsive_robots + fx_repulsive_boxes + fx_wall + fx_attractive
+                V_repulsive[i, j] = fy_repulsive_robots + fy_repulsive_boxes + fy_wall + fy_attractive
 
         plt.figure(figsize=(10, 8))
         plt.quiver(X, Y, U_repulsive, V_repulsive, color='r', alpha=0.5)
@@ -179,6 +189,10 @@ class RobotController:
 
         if current_position:
             plt.scatter(current_position[0], current_position[1], c='black', marker='o', label='Current Position')
+
+        if goal_positions:
+            goal_x, goal_y = zip(*[(pos[0], pos[1]) for pos in goal_positions])
+            plt.scatter(goal_x, goal_y, c='green', marker='x', label='Goal Positions')
 
         plt.xlabel('X')
         plt.ylabel('Y')
@@ -196,14 +210,15 @@ if __name__ == "__main__":
             message = controller.receiver.getString()
             controller.receiver.nextPacket()
             
-            box_positions, robot_positions, current_position, current_rotation = controller.process_message(message)
+            box_positions, robot_positions, goal_positions, current_position, current_rotation = controller.process_message(message)
 
             repulsive_x_robots, repulsive_y_robots = controller.repulsive_potential_from_robots(robot_positions, current_position, controller.params['ROBOT_REPELLING_RADIUS'])
             repulsive_x_boxes, repulsive_y_boxes = controller.repulsive_potential_from_boxes(box_positions, current_position, controller.params['BOX_REPELLING_RADIUS'])
-            wall_repulsive_x, wall_repulsive_y = controller.wall_repulsive_potential(controller.WALLS, current_position)
+            wall_repulsive_x, wall_repulsive_y = controller.wall_repulsive_potential(controller.WALLS, current_position, controller.params['WALL_REPELLING_RADIUS'])
+            attractive_x_goals, attractive_y_goals = controller.attractive_potential_from_goals(goal_positions, current_position, controller.params['GOAL_ATTRACTIVE_RADIUS'])
 
-            total_force_x = repulsive_x_robots + repulsive_x_boxes + wall_repulsive_x
-            total_force_y = repulsive_y_robots + repulsive_y_boxes + wall_repulsive_y
+            total_force_x = repulsive_x_robots + repulsive_x_boxes + wall_repulsive_x + attractive_x_goals
+            total_force_y = repulsive_y_robots + repulsive_y_boxes + wall_repulsive_y + attractive_y_goals
 
             force_magnitude = math.hypot(total_force_x, total_force_y)
             if force_magnitude > controller.params['MAX_FORCE']:
@@ -222,4 +237,4 @@ if __name__ == "__main__":
             controller.update_motors(left_velocity, right_velocity)
 
             # Uncomment the line below to visualize the potential field
-            # controller.plot_apf_2d(robot_positions, box_positions, controller.WALLS, current_position)
+            # controller.plot_apf_2d(robot_positions, box_positions, controller.WALLS, current_position, goal_positions)
