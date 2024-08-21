@@ -19,14 +19,14 @@ class RobotController:
         self.right_motor.setVelocity(0.0)
 
         self.params = {
-            'ROBOT_REPULSIVE_GAIN': 10.0,
-            'ROBOT_REPELLING_RADIUS': 0.5,
-            'BOX_REPULSIVE_GAIN': 15.0,
+            'ROBOT_REPULSIVE_GAIN': 5.0,
+            'ROBOT_REPELLING_RADIUS': 1,
+            'BOX_REPULSIVE_GAIN': 2.0,
             'BOX_REPELLING_RADIUS': 0.5,
-            'WALL_REPULSIVE_GAIN': 20.0,
-            'WALL_REPELLING_RADIUS': 0.5,
+            'WALL_REPULSIVE_GAIN': 10.0,
+            'WALL_REPELLING_RADIUS': 0.2,
             'GOAL_ATTRACTIVE_GAIN': 50.0,
-            'GOAL_ATTRACTIVE_RADIUS': 0.8,
+            'GOAL_ATTRACTIVE_RADIUS': 0.4,
             'MAX_VELOCITY': 6.28,
             'MAX_FORCE': 2.0,
             'DAMPING_FACTOR': 0.1,
@@ -171,8 +171,8 @@ class RobotController:
                 pos = (X[i, j], Y[i, j], 0)  # z is 0 for 2D plot
                 fx_repulsive_robots, fy_repulsive_robots = self.repulsive_potential_from_robots(repulsive_positions, pos, self.params['ROBOT_REPELLING_RADIUS'])
                 fx_repulsive_boxes, fy_repulsive_boxes = self.repulsive_potential_from_boxes(box_positions, pos, self.params['BOX_REPELLING_RADIUS'])
-                fx_wall, fy_wall = self.wall_repulsive_potential(self.WALLS, pos)
-                fx_attractive, fy_attractive = self.attractive_potential_from_goals(goal_positions, pos)
+                fx_wall, fy_wall = self.wall_repulsive_potential(self.WALLS, pos, controller.params['WALL_REPELLING_RADIUS'])
+                fx_attractive, fy_attractive = self.attractive_potential_from_goals(goal_positions, pos, controller.params['GOAL_ATTRACTIVE_RADIUS'])
                 U_repulsive[i, j] = fx_repulsive_robots + fx_repulsive_boxes + fx_wall + fx_attractive
                 V_repulsive[i, j] = fy_repulsive_robots + fy_repulsive_boxes + fy_wall + fy_attractive
 

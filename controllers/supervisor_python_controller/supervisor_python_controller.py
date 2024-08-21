@@ -37,15 +37,32 @@ def point_to_line_distance(point, line_start, line_end):
         return math.sqrt((px - sx) ** 2 + (py - sy) ** 2)
     return abs((ey - sy) * px - (ex - sx) * py + ex * sy - ey * sx) / line_length
 
+class Goal:
+    def __init__(self, x, y, goal_type, creation_timestep):
+        self.x = x
+        self.y = y
+        self.goal_type = goal_type
+        self.creation_timestep = creation_timestep  # Timestep when the goal was created
+        self.last_detected_timestep = creation_timestep  # Timestep when the goal was last detected
+
+    def update_last_detected(self, timestep):
+        self.last_detected_timestep = timestep
+
+    def has_timed_out(self, current_timestep, timeout):
+        return (current_timestep - self.last_detected_timestep) > timeout
+
 # Goal Manager class to handle goal placement and removal
 class GoalManager:
-    def __init__(self, supervisor, walls):
+    def __init__(self, supervisor, walls, goal_timeout=15, max_goals=15):
         self.supervisor = supervisor
         self.goals = []
         self.walls = walls
         self.goal_placement_threshold = 0.1  # Minimum distance from walls for goal placement
-        self.goal_min_distance = 0.4  # Minimum distance between goals
+        self.goal_min_distance = 0.6 # Minimum distance between goals
         self.robot_min_distance = 0.2  # Minimum distance from robots for goal placement
+        self.obstacle_min_distance = 0.1  # Minimum distance from obstacles for goal placement
+        self.goal_timeout = goal_timeout  # Number of timesteps before a goal is removed
+        self.max_goals = max_goals  # Maximum number of goals allowed at any time
 
     def is_near_wall(self, x, y):
         for wall_start, wall_end in self.walls:
@@ -54,8 +71,8 @@ class GoalManager:
         return False
 
     def is_near_goal(self, x, y):
-        for gx, gy, _ in self.goals:
-            if math.sqrt((gx - x) ** 2 + (gy - y) ** 2) <= self.goal_min_distance:
+        for goal in self.goals:
+            if math.sqrt((goal.x - x) ** 2 + (goal.y - y) ** 2) <= self.goal_min_distance:
                 return True
         return False
 
@@ -66,25 +83,52 @@ class GoalManager:
                 return True
         return False
 
-    def add_goal(self, x, y, goal_type, robots):
-        if not self.is_near_wall(x, y) and not self.is_near_goal(x, y) and not self.is_near_robot(x, y, robots):
-            self.goals.append((x, y, goal_type))
+    def is_near_obstacle(self, x, y, obstacles):
+        for obstacle in obstacles:
+            ox, oy, _ = obstacle
+            if math.sqrt((ox - x) ** 2 + (oy - y) ** 2) <= self.obstacle_min_distance:
+                return True
+        return False
 
-    def update_goals(self, robots):
-        # Remove explore goals near robot positions or walls
-        self.goals = [(x, y, t) for x, y, t in self.goals if t != 'explore' or (not self.is_near_wall(x, y) and not self.is_near_robot(x, y, robots))]
+    def add_goal(self, x, y, goal_type, robots, obstacles):
+        if len(self.goals) < self.max_goals:  # Only add a goal if under the max limit
+            if (not self.is_near_wall(x, y) and not self.is_near_goal(x, y) 
+                and not self.is_near_robot(x, y, robots) and not self.is_near_obstacle(x, y, obstacles)):
+                
+                creation_timestep = self.supervisor.getTime()  # Get the current timestep
+                new_goal = Goal(x, y, goal_type, creation_timestep)
+                self.goals.append(new_goal)
 
-        # Add new explore goals
+    def update_goals(self, robots, obstacles):
+        current_time = self.supervisor.getTime()
+
+        # Remove goals that are near robots, near walls, near obstacles, or have timed out
+        self.goals = [goal for goal in self.goals 
+                      if (goal.goal_type != 'explore' or (
+                            not self.is_near_wall(goal.x, goal.y) and 
+                            not self.is_near_robot(goal.x, goal.y, robots) and 
+                            not self.is_near_obstacle(goal.x, goal.y, obstacles)))
+                      and not goal.has_timed_out(current_time, self.goal_timeout)]
+
+        # Update last detected time for goals near robots
+        for goal in self.goals:
+            if self.is_near_robot(goal.x, goal.y, robots):
+                goal.update_last_detected(current_time)
+
+        # Add new explore goals, but only if the number of goals is below the maximum
         for _ in range(5):  # Try adding 5 new explore goals per update
-            x = random.uniform(-1, 1)  # Adjust to the size of your arena
-            y = random.uniform(-1, 1)  # Adjust to the size of your arena
-            if not self.is_near_wall(x, y) and not self.is_near_goal(x, y) and not self.is_near_robot(x, y, robots):
-                self.add_goal(x, y, 'explore', robots)
+            if len(self.goals) < self.max_goals:  # Check again before each addition
+                x = random.uniform(-1, 1)  # Adjust to the size of your arena
+                y = random.uniform(-1, 1)  # Adjust to the size of your arena
+                if (not self.is_near_wall(x, y) and not self.is_near_goal(x, y) 
+                    and not self.is_near_robot(x, y, robots) and not self.is_near_obstacle(x, y, obstacles)):
+                    self.add_goal(x, y, 'explore', robots, obstacles)
 
         print(f"Debug: Updated Goals - Total: {len(self.goals)}")
 
     def get_goals(self):
-        return self.goals
+        # Return goal data in the expected format
+        return [(goal.x, goal.y, goal.goal_type) for goal in self.goals]
 
 # Create the Supervisor instance
 supervisor = Supervisor()
@@ -141,7 +185,61 @@ def plot_environment(box_positions, robot_positions, goals, walls):
     plt.title('Environment Plot')
     plt.legend()
     plt.grid(True)
-    plt.show()
+    plt.show(block=False)
+    plt.pause(1)
+    plt.close()
+
+display = supervisor.getDevice("display")
+
+def draw_on_display(display, box_positions, robot_positions, goals, walls):
+    # Define colors using hex codes
+    COLOR_BACKGROUND = 0x000000  # Black
+    COLOR_WALL = 0xffffff  # White
+    COLOR_BOX = 0x854e00  # Brown
+    COLOR_ROBOT = 0x0000ff  # Blue
+    COLOR_GOAL = 0xff0000  # Red
+    COLOR_EXTRA = 0xff00fb  # Extra color
+
+    # Set background color and clear display
+    display.setColor(COLOR_BACKGROUND)
+    display.fillRectangle(0, 0, display.getWidth(), display.getHeight())
+
+    # Draw walls
+    display.setColor(COLOR_WALL)
+    for wall_start, wall_end in walls:
+        x1 = int((wall_start[0] + 1) * display.getWidth() / 2)
+        y1 = int((1 - wall_start[1]) * display.getHeight() / 2)
+        x2 = int((wall_end[0] + 1) * display.getWidth() / 2)
+        y2 = int((1 - wall_end[1]) * display.getHeight() / 2)
+        display.drawLine(x1, y1, x2, y2)
+
+    # Draw boxes
+    display.setColor(COLOR_BOX)
+    for box in box_positions:
+        x = int((box[0] + 1) * display.getWidth() / 2)
+        y = int((1 - box[1]) * display.getHeight() / 2)
+        display.drawRectangle(x - 3, y - 3, 6, 6)
+
+    # Draw robots
+    display.setColor(COLOR_ROBOT)
+    for robot in robot_positions:
+        x = int((robot[0] + 1) * display.getWidth() / 2)
+        y = int((1 - robot[1]) * display.getHeight() / 2)
+        display.drawOval(x - 1, y - 1, 2, 2)  # Center the oval on the coordinate
+
+    # Draw goals
+    display.setColor(COLOR_GOAL)
+    for goal in goals:
+        x, y, goal_type = goal
+        if goal_type == 'explore':
+            x = int((x + 1) * display.getWidth() / 2)
+            y = int((1 - y) * display.getHeight() / 2)
+            display.drawOval(x - 1, y - 1, 1, 1)  # Center the oval on the coordinate
+
+    # Draw an extra pixel for testing
+    display.setColor(COLOR_EXTRA)
+    display.drawPixel(0, 0)
+
 
 # Main loop
 timestep = int(supervisor.getBasicTimeStep())
@@ -161,14 +259,15 @@ while supervisor.step(timestep) != -1:
             rotation = rotation_field.getSFRotation()
             robot_data.append({"position": position, "rotation": rotation})
 
-    goal_manager.update_goals(robot_data)
+    
 
     # Collect data for plotting
     box_positions = [wooden_box.getField("translation").getSFVec3f() for wooden_box in wooden_boxes]
     robot_positions = [robot.getField("translation").getSFVec3f() for robot in robots]
+    goal_manager.update_goals(robot_data,box_positions)
     goals = goal_manager.get_goals()
     #goals = [(0.5, 0.5, 'explore')]
-
+    draw_on_display(display, box_positions, robot_positions, goals, WALLS)
     # Check if it's time to send data
     if current_time - last_send_time >= send_interval:
         # Plot the environment

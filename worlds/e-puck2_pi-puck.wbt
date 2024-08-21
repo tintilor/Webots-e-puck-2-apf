@@ -127,6 +127,8 @@ E-puck {
 }
 Robot {
   children [
+    Display {
+    }
     Receiver {
       channel 1
     }
