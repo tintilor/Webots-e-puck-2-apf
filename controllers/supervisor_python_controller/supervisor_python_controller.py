@@ -37,6 +37,12 @@ def point_to_line_distance(point, line_start, line_end):
         return math.sqrt((px - sx) ** 2 + (py - sy) ** 2)
     return abs((ey - sy) * px - (ex - sx) * py + ex * sy - ey * sx) / line_length
 
+class Hazard:
+    def __init__(self, x, y, creation_timestep):
+        self.x = x
+        self.y = y
+        self.creation_timestep = creation_timestep
+
 class Goal:
     def __init__(self, x, y, goal_type, creation_timestep):
         self.x = x
