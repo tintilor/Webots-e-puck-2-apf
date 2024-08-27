@@ -173,14 +173,17 @@ def plot_environment(box_positions, robot_positions, goals, walls, has_started):
             plot_environment.ax.plot(wall_x, wall_y, 'k-', linewidth=2, label='Wall')
         
         # Initialize plots for boxes, robots, and goals
-        plot_environment.box_plots = [plot_environment.ax.plot([], [], 's', markersize=10, color='brown')[0] for _ in box_positions]
-        plot_environment.robot_plots = [plot_environment.ax.plot([], [], 'o', markersize=8, color='blue')[0] for _ in robot_positions]
-        plot_environment.goal_plots = [plot_environment.ax.plot([], [], 'x', markersize=10, color='red')[0] for _ in goals]
+        plot_environment.box_plots = [plot_environment.ax.plot([], [], 's', markersize=10, color='brown', label='Box')[0] for _ in box_positions]
+        plot_environment.robot_plots = [plot_environment.ax.plot([], [], 'o', markersize=8, color='blue', label='Robot')[0] for _ in robot_positions]
+        plot_environment.goal_plots = [plot_environment.ax.plot([], [], 'x', markersize=10, color='red', label='Goal')[0] for _ in goals]
 
         plot_environment.ax.set_xlabel('X Coordinate')
         plot_environment.ax.set_ylabel('Y Coordinate')
         plot_environment.ax.set_title('Environment Plot')
-        plot_environment.ax.legend()
+        handles, labels = plt.gca().get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        plot_environment.ax.legend(by_label.values(), by_label.keys(), loc='lower right')
+        #plot_environment.ax.legend()
         plot_environment.ax.grid(True)
         plot_environment.initialized = True
 

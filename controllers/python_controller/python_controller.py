@@ -10,6 +10,9 @@ class RobotController:
         self.timestep = int(self.robot.getBasicTimeStep())
         self.receiver = self.robot.getDevice("receiver")
         self.receiver.enable(self.timestep)
+
+        #self.camera = self.robot.getDevice("camera")
+        #self.camera.enable(self.timestep)
         
         self.left_motor = self.robot.getDevice('left wheel motor')
         self.right_motor = self.robot.getDevice('right wheel motor')
@@ -28,7 +31,7 @@ class RobotController:
             'GOAL_ATTRACTIVE_GAIN': 50.0,
             'GOAL_ATTRACTIVE_RADIUS': 0.4,
             'MAX_VELOCITY': 6.28,
-            'MAX_FORCE': 2.0,
+            'MAX_FORCE': 10000000.0,
             'DAMPING_FACTOR': 0.1,
             'RANDOM_PERTURBATION': 0.0,
             'WHEEL_DISTANCE': 0.053,
@@ -49,7 +52,7 @@ class RobotController:
             dy = current_position[1] - pos[1]
             distance = math.hypot(dx, dy)
             if distance < radius:
-                force_magnitude = self.params['ROBOT_REPULSIVE_GAIN'] * (radius - distance) ** 2 / (distance ** 2 + 1e-6)
+                force_magnitude = self.params['ROBOT_REPULSIVE_GAIN'] * ((1 / distance) - (1 / radius))
                 force_x += force_magnitude * (dx / distance)
                 force_y += force_magnitude * (dy / distance)
         return force_x, force_y
@@ -61,7 +64,7 @@ class RobotController:
             dy = current_position[1] - pos[1]
             distance = math.hypot(dx, dy)
             if distance < radius:
-                force_magnitude = self.params['BOX_REPULSIVE_GAIN'] * (radius - distance) ** 2 / (distance ** 2 + 1e-6)
+                force_magnitude = self.params['BOX_REPULSIVE_GAIN'] * ((1 / distance) - (1 / radius))
                 force_x += force_magnitude * (dx / distance)
                 force_y += force_magnitude * (dy / distance)
         return force_x, force_y
@@ -82,7 +85,7 @@ class RobotController:
             dy = current_position[1] - closest_y
             distance = math.hypot(dx, dy)
             if distance < radius:
-                force_magnitude = self.params['WALL_REPULSIVE_GAIN'] * (radius - distance) ** 2 / (distance ** 2 + 1e-6)
+                force_magnitude = self.params['WALL_REPULSIVE_GAIN'] * ((1 / distance) - (1 / radius))
                 force_x += force_magnitude * (dx / distance)
                 force_y += force_magnitude * (dy / distance)
         return force_x, force_y
