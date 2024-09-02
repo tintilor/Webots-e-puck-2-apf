@@ -6,6 +6,7 @@ EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/project
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/factory/containers/protos/WoodenBox.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/gctronic/e-puck/protos/E-puck.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/gctronic/e-puck/protos/Pi-puck.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/shapes/protos/TexturedBoxShape.proto"
 
 WorldInfo {
   info [
@@ -14,9 +15,9 @@ WorldInfo {
   title "e-puck simulation"
 }
 Viewpoint {
-  orientation -0.3500734069125635 0.1296348239354801 0.9277086946859169 2.8594753200265814
-  position 3.1057041902874927 -1.2022286845858736 2.924110039716504
-  follow "e-puck2"
+  orientation 0.47224804922674807 -0.5664808532806357 -0.6753378583109153 4.236033313633379
+  position 0.5307567210695341 -1.3513389036371934 4.109708812159263
+  follow "e-puck2(6)"
 }
 TexturedBackground {
 }
@@ -26,8 +27,18 @@ RectangleArena {
   floorSize 2 2
 }
 DEF puck E-puck {
-  translation -0.134951 0.525505 -0.000379205
-  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  hidden position_0_0 -11.345237277611918
+  hidden position_0_1 36.434466554704336
+  hidden linearVelocity_0 -1.6800972619084337e-10 -2.543683605456675e-10 1.4896724161580547e-10
+  hidden angularVelocity_0 1.4484914089871135e-08 -9.571014240995657e-09 -2.7919660603457273e-12
+  hidden rotation_1 0 1 0 1.2211333367472545
+  hidden linearVelocity_1 -1.179532560600246e-10 -3.3528450536779445e-10 1.1564370057559616e-06
+  hidden angularVelocity_1 -1.4754628064751912e-09 -3.502581674558849e-08 -2.7869199627626193e-12
+  hidden rotation_2 0 -1 0 1.2646452883731827
+  hidden linearVelocity_2 -2.6448166660225647e-10 -2.434964113152976e-10 1.1563791473268026e-06
+  hidden angularVelocity_2 3.0444878365994215e-08 1.5883293744302358e-08 -2.7903676020897028e-12
+  translation -0.15777366414920965 0.5008253313323004 -6.009863829694803e-05
+  rotation -0.0007987547355385551 -0.00044197764837999414 0.9999995833232287 -2.1308379328460703
   name "e-puck2(5)"
   controller "python_controller"
   controllerArgs [
@@ -39,6 +50,20 @@ DEF puck E-puck {
   camera_height 240
   receiver_channel 6
   turretSlot [
+    Solid {
+      translation 0.01 0 0.02
+      rotation 1 0 0 3.14158
+      children [
+        TexturedBoxShape {
+          size 0.1 0.1 0.001
+          textureUrl [
+            "../ArUcoTags/DICT_4X4_100_5.png"
+          ]
+          textureMapping "none"
+        }
+      ]
+      rotationStep 0.261799
+    }
     GPS {
     }
     Pi-puck {
@@ -46,8 +71,18 @@ DEF puck E-puck {
   ]
 }
 DEF puck E-puck {
-  translation 0.05248 -0.102507 -0.000379205
-  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  hidden position_0_0 -23.304056098574954
+  hidden position_0_1 71.18367901751809
+  hidden linearVelocity_0 -3.199865524188576e-10 8.155600830926065e-10 2.945168020734404e-10
+  hidden angularVelocity_0 -4.7201885329159956e-08 -1.5653923965825415e-08 -2.1550074178063436e-09
+  hidden rotation_1 0 1 0 1.8286851301433924
+  hidden linearVelocity_1 -3.937547270876919e-10 8.993084482829271e-10 1.156517129041745e-06
+  hidden angularVelocity_1 -5.536627916871827e-08 1.3258879925391323e-08 -2.1529981034482435e-09
+  hidden rotation_2 0 -1 0 4.21454466863695
+  hidden linearVelocity_2 -2.383937303639114e-10 9.85397466293607e-10 1.1565958720982644e-06
+  hidden angularVelocity_2 -3.903720511064655e-08 -4.456762333726212e-08 -2.1529738228892975e-09
+  translation 0.571789965449165 -0.059464363276225396 -6.009865701329595e-05
+  rotation -0.000798775240889961 0.0006044080229158174 0.9999994983244024 1.8460388025964658
   name "e-puck2(4)"
   controller "python_controller"
   controllerArgs [
@@ -59,6 +94,20 @@ DEF puck E-puck {
   camera_height 240
   receiver_channel 5
   turretSlot [
+    Solid {
+      translation 0.01 0 0.02
+      rotation 1 0 0 3.14159
+      children [
+        TexturedBoxShape {
+          size 0.1 0.1 0.001
+          textureUrl [
+            "../ArUcoTags/DICT_4X4_100_4.png"
+          ]
+          textureMapping "none"
+        }
+      ]
+      rotationStep 0.261799
+    }
     GPS {
     }
     Pi-puck {
@@ -66,8 +115,18 @@ DEF puck E-puck {
   ]
 }
 DEF puck E-puck {
-  translation -0.390932 0.268266 0.000402856
-  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  hidden position_0_0 26.965514861974913
+  hidden position_0_1 28.114013149794946
+  hidden linearVelocity_0 1.9485197928001084e-09 1.186637431806202e-10 9.665866527169147e-10
+  hidden angularVelocity_0 -7.843104088944397e-09 1.109252019397589e-07 8.725756070226126e-10
+  hidden rotation_1 0 1 0 1.8327736332565676
+  hidden linearVelocity_1 2.2174411150744746e-09 2.4218910262691065e-10 1.157295704112826e-06
+  hidden angularVelocity_1 2.209121185366701e-08 1.1350494951265545e-07 8.717368829708723e-10
+  hidden rotation_2 0 1 0 2.9812719210766003
+  hidden linearVelocity_2 2.215938347090641e-09 6.852046117999971e-11 1.1571685219369243e-06
+  hidden angularVelocity_2 -3.7775200842088085e-08 1.0834549707643333e-07 8.7177592477938e-10
+  translation -0.3033658095335325 -0.03446998492779088 -6.0098743196231735e-05
+  rotation -0.000799038549943056 0.018569966469172892 0.9998272440190502 0.08597383804838941
   name "e-puck2(3)"
   controller "python_controller"
   controllerArgs [
@@ -79,6 +138,19 @@ DEF puck E-puck {
   camera_height 240
   receiver_channel 4
   turretSlot [
+    Solid {
+      translation 0.01 0 0.02
+      children [
+        TexturedBoxShape {
+          size 0.1 0.1 0.001
+          textureUrl [
+            "../ArUcoTags/DICT_4X4_100_3.png"
+          ]
+          textureMapping "none"
+        }
+      ]
+      rotationStep 0.261799
+    }
     GPS {
     }
     Pi-puck {
@@ -86,8 +158,18 @@ DEF puck E-puck {
   ]
 }
 DEF puck E-puck {
-  translation 0.33372 0.528872 -5.72129e-05
-  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
+  hidden position_0_0 2.3203388695082916
+  hidden position_0_1 -1.9905104667044562
+  hidden linearVelocity_0 3.5538442349886996e-05 0.001088785967251881 -2.4422125814799237e-06
+  hidden angularVelocity_0 -0.06194615900560798 0.0020207992901007717 -1.294316837852824e-06
+  hidden rotation_1 0 0.9999999999999999 0 2.3203388695082916
+  hidden linearVelocity_1 4.041606741639895e-05 0.0012389237387202964 -2.7999569832015665e-06
+  hidden angularVelocity_1 -0.06194616006160772 0.002020767614426198 -1.2930100559425612e-06
+  hidden rotation_2 0 -1 0 1.9905104667044562
+  hidden linearVelocity_2 4.0415936703151166e-05 0.0012389231256309788 -2.7865298020568425e-06
+  hidden angularVelocity_2 -0.06194615794457666 0.002020831762243072 -1.2937998289096423e-06
+  translation 0.34349445545915247 0.5295408653983186 -5.978391463372368e-05
+  rotation 0.0006822569410201164 0.0006603789588071184 -0.999999549212447 1.6034029728163315
   name "e-puck2(2)"
   controller "python_controller"
   controllerArgs [
@@ -99,6 +181,20 @@ DEF puck E-puck {
   camera_height 240
   receiver_channel 3
   turretSlot [
+    Solid {
+      translation 0.01 0 0.02
+      rotation 1 0 0 3.14158
+      children [
+        TexturedBoxShape {
+          size 0.1 0.1 0.001
+          textureUrl [
+            "../ArUcoTags/DICT_4X4_100_2.png"
+          ]
+          textureMapping "none"
+        }
+      ]
+      rotationStep 0.261799
+    }
     GPS {
     }
     Pi-puck {
@@ -106,8 +202,18 @@ DEF puck E-puck {
   ]
 }
 E-puck {
-  translation 0.16185 -0.548276 -0.000379205
-  rotation -0.0008121623278961846 -0.007276381173966691 0.999973196975481 -0.21833653140406284
+  hidden position_0_0 51.928437572599954
+  hidden position_0_1 -40.80197749625364
+  hidden linearVelocity_0 -7.453391206106754e-11 -4.77231935176906e-10 2.1545004351526571e-10
+  hidden angularVelocity_0 2.7241112545684897e-08 -2.783930484095405e-09 1.1761384668709387e-09
+  hidden rotation_1 0 1 0 1.662955115163262
+  hidden linearVelocity_1 2.8553954079663105e-11 -5.582940471824407e-10 1.156543004166011e-06
+  hidden angularVelocity_1 2.6219395873753185e-08 -3.281124654997811e-08 1.1750342948878248e-09
+  hidden rotation_2 0 -0.9999999999999999 0 3.102865653176123
+  hidden linearVelocity_2 -1.4351093273815034e-10 -5.302864000667442e-10 1.1564083417514573e-06
+  hidden angularVelocity_2 2.8262760679744462e-08 2.72421855709241e-08 1.1750444151463547e-09
+  translation 0.08867318399014466 -0.5528198981343516 -6.00986468319957e-05
+  rotation 0.0007987460261917069 0.0007720535082177542 -0.9999993829688926 1.6048244352891745
   name "e-puck2(1)"
   controller "python_controller"
   controllerArgs [
@@ -119,6 +225,20 @@ E-puck {
   camera_height 240
   receiver_channel 2
   turretSlot [
+    Solid {
+      translation 0.01 0 0.02
+      rotation 1 0 0 3.14158
+      children [
+        TexturedBoxShape {
+          size 0.1 0.1 0.001
+          textureUrl [
+            "../ArUcoTags/DICT_4X4_100_1.png"
+          ]
+          textureMapping "none"
+        }
+      ]
+      rotationStep 0.261799
+    }
     GPS {
     }
     Pi-puck {
@@ -126,7 +246,17 @@ E-puck {
   ]
 }
 Robot {
+  translation 0 0 1
+  rotation 1 0 0 0
   children [
+    Camera {
+      rotation -0.5773503304347346 0.5773503304347346 0.5773501466993886 2.094391183737481
+      fieldOfView 1.7
+      width 2048
+      height 2048
+      near 1
+      far 2
+    }
     Receiver {
       channel 1
     }
@@ -173,11 +303,19 @@ WoodenBox {
   size 0.1 0.1 0.1
 }
 DEF puck E-puck {
-  hidden linearVelocity_0 0.017734893723936968 -0.003079062090172067 -2.0517519664730114e-11
-  hidden angularVelocity_0 -1.151071986893956e-08 1.2447712139552052e-08 0.07029813606193129
-  translation -0.2969507164240214 -0.31317876764459834 -6.012661997007243e-05
-  rotation 0.000816160722322207 0.00931670401624759 -0.9999562654976211 0.1707949229512388
-  name "e-puck2"
+  hidden position_0_0 22.912099254041088
+  hidden position_0_1 41.004534074573584
+  hidden linearVelocity_0 2.429131820695167e-09 -1.4366068813692487e-10 1.2403274843454994e-09
+  hidden angularVelocity_0 1.0104655174486196e-08 1.3823135537078897e-07 -1.5492908607814504e-09
+  hidden rotation_1 0 -1 0 2.2206419746772577
+  hidden linearVelocity_1 2.7554533833231905e-09 -1.1209772702094927e-10 1.1574735856445537e-06
+  hidden angularVelocity_1 4.003290965359088e-08 1.3559860219217418e-07 -1.5478596973366782e-09
+  hidden rotation_2 0 0.9999999999999999 0 3.3054222314960655
+  hidden linearVelocity_2 2.7693833971984415e-09 -2.868950888489099e-10 1.1575414197384513e-06
+  hidden angularVelocity_2 -1.982414373062531e-08 1.4086394409585612e-07 -1.5478142264605325e-09
+  translation 0.12721307868165793 -0.11914775453756657 -6.0098778305626294e-05
+  rotation 0.0007982162725075924 0.01819683113614345 -0.9998341053331722 0.08773451657765376
+  name "e-puck2(6)"
   controller "python_controller"
   controllerArgs [
     ""
@@ -187,6 +325,20 @@ DEF puck E-puck {
   camera_width 320
   camera_height 240
   turretSlot [
+    Solid {
+      translation 0.01 0 0.02
+      rotation 1 0 0 3.14156
+      children [
+        TexturedBoxShape {
+          size 0.1 0.1 0.001
+          textureUrl [
+            "../ArUcoTags/DICT_4X4_100_6.png"
+          ]
+          textureMapping "none"
+        }
+      ]
+      rotationStep 0.261799
+    }
     GPS {
     }
     Pi-puck {

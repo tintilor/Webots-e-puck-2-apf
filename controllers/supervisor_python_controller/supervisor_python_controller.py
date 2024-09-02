@@ -1,5 +1,7 @@
 from controller import Supervisor
 import json
+import numpy as np
+import matplotlib.pyplot as plt
 
 def find_all_wooden_boxes(node, boxes):
     if node.getTypeName() == 'WoodenBox':
@@ -32,9 +34,12 @@ for i in range(root_children_field.getCount()):
     find_all_robots(node, robots)
 
 emitter = supervisor.getDevice("emitter")
+camera = supervisor.getDevice("camera")
 
 # Get the time step of the current world
 timestep = int(supervisor.getBasicTimeStep())
+
+camera.enable(timestep)
 
 last_send_time = 0
 send_interval = 1000  # 1 second
@@ -42,6 +47,10 @@ send_interval = 1000  # 1 second
 # Main loop
 while supervisor.step(timestep) != -1:
     current_time = supervisor.getTime() * 1000
+
+    # cameraData = camera.getImage();
+    # image = np.frombuffer(cameraData, np.uint8).reshape((camera.getHeight(), camera.getWidth(), 4))
+    # plt.imsave('output_image.png', image)
 
     # Check if it's time to send data
     if current_time - last_send_time >= send_interval:
