@@ -42,6 +42,53 @@ class Hazard:
         self.x = x
         self.y = y
         self.creation_timestep = creation_timestep
+        self.found = False
+
+def initialize_hazards(supervisor, walls, boxes, robots, num_hazards=3):
+    hazards = []
+    hazard_min_distance = 0.6  # Minimum distance between hazards
+    hazard_placement_threshold = 0.1  # Minimum distance from walls for hazard placement
+    box_min_distance=0.2
+    robot_min_distance=0.5
+
+    def is_near_wall(x, y):
+        for wall_start, wall_end in walls:
+            if point_to_line_distance((x, y, 0), wall_start, wall_end) < hazard_placement_threshold:
+                return True
+        return False
+
+    def is_near_hazard(x, y):
+        for hazard in hazards:
+            if math.sqrt((hazard.x - x) ** 2 + (hazard.y - y) ** 2) <= hazard_min_distance:
+                return True
+        return False
+    def is_near_box(x, y, boxes):
+        for box in boxes:
+            bx, by, _ = box  # Assuming the box positions are tuples (x, y, z)
+            if math.sqrt((bx - x) ** 2 + (by - y) ** 2) <= box_min_distance:
+                return True
+        return False
+    
+    def is_near_robot(x, y, robots):
+        for robot in robots:
+            rx, ry, _ = robot["position"]  # Assuming robots is a list of dictionaries with a 'position' key
+            if math.sqrt((rx - x) ** 2 + (ry - y) ** 2) <= robot_min_distance:
+                return True
+        return False
+
+    for _ in range(num_hazards):
+        placed = False
+        while not placed:
+            x = random.uniform(-1, 1)  # Adjust based on arena size
+            y = random.uniform(-1, 1)
+            if (not is_near_wall(x, y) and not is_near_hazard(x, y) and 
+                not is_near_box(x, y, boxes) and 
+                not is_near_robot(x, y, robots)):
+                creation_timestep = supervisor.getTime()  # Get the current timestep
+                new_hazard = Hazard(x, y, creation_timestep)
+                hazards.append(new_hazard)
+                placed = True
+    return hazards
 
 class Goal:
     def __init__(self, x, y, goal_type, creation_timestep):
@@ -152,6 +199,10 @@ for i in range(root_children_field.getCount()):
 
 emitter = supervisor.getDevice("emitter")
 
+receiver = supervisor.getDevice("receiver")
+receiver.enable(int(supervisor.getBasicTimeStep()))
+receiver.setChannel(100)  # Assume robots are sending messages on channel 100
+
 # Wall coordinates (update according to your arena)
 WALLS = [
     ([-1, -1, 0], [1, -1, 0]),
@@ -164,7 +215,7 @@ WALLS = [
 goal_manager = GoalManager(supervisor, WALLS)
 
 # Function to plot the environment
-def plot_environment(box_positions, robot_positions, goals, walls, has_started):
+def plot_environment(box_positions, robot_positions, goals, hazards, walls, has_started):
     if not hasattr(plot_environment, "initialized"):
         plot_environment.initialized = False
 
@@ -178,10 +229,11 @@ def plot_environment(box_positions, robot_positions, goals, walls, has_started):
             wall_y = [wall_start[1], wall_end[1]]
             plot_environment.ax.plot(wall_x, wall_y, 'k-', linewidth=2, label='Wall')
         
-        # Initialize plots for boxes, robots, and goals
+        # Initialize plots for boxes, robots, goals, and hazards
         plot_environment.box_plots = [plot_environment.ax.plot([], [], 's', markersize=10, color='brown', label='Box')[0] for _ in box_positions]
         plot_environment.robot_plots = [plot_environment.ax.plot([], [], 'o', markersize=8, color='blue', label='Robot')[0] for _ in robot_positions]
         plot_environment.goal_plots = [plot_environment.ax.plot([], [], 'x', markersize=10, color='red', label='Goal')[0] for _ in goals]
+        plot_environment.hazard_plots = [plot_environment.ax.plot([], [], 'D', markersize=8, color='purple', label='Undetected Hazard')[0] for _ in hazards]
 
         plot_environment.ax.set_xlabel('X Coordinate')
         plot_environment.ax.set_ylabel('Y Coordinate')
@@ -189,16 +241,20 @@ def plot_environment(box_positions, robot_positions, goals, walls, has_started):
         handles, labels = plt.gca().get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         plot_environment.ax.legend(by_label.values(), by_label.keys(), loc='lower right')
-        #plot_environment.ax.legend()
         plot_environment.ax.grid(True)
         plot_environment.initialized = True
 
-    # Adjust the goal plots list size to match the number of goals
+    # Adjust the goal and hazard plots list size to match the number of goals and hazards
     while len(plot_environment.goal_plots) < len(goals):
         plot_environment.goal_plots.append(plot_environment.ax.plot([], [], 'x', markersize=10, color='red')[0])
     while len(plot_environment.goal_plots) > len(goals):
         plot_environment.goal_plots.pop().remove()
     
+    while len(plot_environment.hazard_plots) < len(hazards):
+        plot_environment.hazard_plots.append(plot_environment.ax.plot([], [], 'D', markersize=8, color='purple')[0])
+    while len(plot_environment.hazard_plots) > len(hazards):
+        plot_environment.hazard_plots.pop().remove()
+
     # Update box positions
     for i, box in enumerate(box_positions):
         plot_environment.box_plots[i].set_data([box[0]], [box[1]])
@@ -212,13 +268,32 @@ def plot_environment(box_positions, robot_positions, goals, walls, has_started):
         x, y, goal_type = goal
         if goal_type == 'explore':
             plot_environment.goal_plots[i].set_data([x], [y])
-    
+
+    # Update hazard positions and change color or shape if found
+    for i, hazard in enumerate(hazards):
+        if hazard.found:
+            plot_environment.hazard_plots[i].set_marker('D')
+            plot_environment.hazard_plots[i].set_color('green')  # Change color to green if found
+            plot_environment.hazard_plots[i].set_label('Detected Hazard')
+        else:
+            plot_environment.hazard_plots[i].set_marker('D')  # Diamond shape if not found
+            plot_environment.hazard_plots[i].set_color('purple')  # Purple color if not found
+            plot_environment.hazard_plots[i].set_label('Undetected Hazard')
+        plot_environment.hazard_plots[i].set_data([hazard.x], [hazard.y])
+
+    # Update the legend
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    plot_environment.ax.legend(by_label.values(), by_label.keys(), loc='lower right')
+
     plt.draw()
     plt.pause(0.1)
 
+
+
 display = supervisor.getDevice("display")
 
-def draw_on_display(display, box_positions, robot_positions, goals, walls):
+def draw_on_display(display, box_positions, robot_positions, goals, walls, hazards):
     # Define colors using hex codes
     COLOR_BACKGROUND = 0x000000  # Black
     COLOR_WALL = 0xffffff  # White
@@ -226,6 +301,8 @@ def draw_on_display(display, box_positions, robot_positions, goals, walls):
     COLOR_ROBOT = 0x0000ff  # Blue
     COLOR_GOAL = 0xff0000  # Red
     COLOR_EXTRA = 0xff00fb  # Extra color
+    COLOR_HAZARD = 0x9428bf # Purple
+    COLOR_HAZARD_FOUND = 0x18c454 #Green
 
     # Set background color and clear display
     display.setColor(COLOR_BACKGROUND)
@@ -263,6 +340,16 @@ def draw_on_display(display, box_positions, robot_positions, goals, walls):
             y = int((1 - y) * display.getHeight() / 2)
             display.drawOval(x - 1, y - 1, 1, 1)  # Center the oval on the coordinate
 
+    display.setColor(COLOR_HAZARD)
+    for hazard in hazards:
+        x = int((hazard.x + 1) * display.getWidth() / 2)
+        y = int((1 - hazard.y) * display.getHeight() / 2)
+        if hazard.found:
+            display.setColor(COLOR_HAZARD_FOUND)
+        else:
+            display.setColor(COLOR_HAZARD)
+        display.drawOval(x - 1, y - 1, 1, 1)  # Center the oval on the coordinate
+
     # Draw an extra pixel for testing
     display.setColor(COLOR_EXTRA)
     display.drawPixel(0, 0)
@@ -273,11 +360,37 @@ timestep = int(supervisor.getBasicTimeStep())
 last_send_time = 0
 send_interval = 1000  # 1 second
 has_started=True
+box_positions = [wooden_box.getField("translation").getSFVec3f() for wooden_box in wooden_boxes]
+robot_data = []
+for robot in robots:
+    translation_field = robot.getField("translation")
+    rotation_field = robot.getField("rotation")
+    if translation_field and rotation_field:
+        position = translation_field.getSFVec3f()
+        rotation = rotation_field.getSFRotation()
+        robot_data.append({"position": position, "rotation": rotation})
+hazards = initialize_hazards(supervisor,WALLS,box_positions,robot_data)
 while supervisor.step(timestep) != -1:
     current_time = supervisor.getTime() * 1000
 
+    while receiver.getQueueLength() > 0:
+        message = receiver.getString()
+        receiver.nextPacket()
+        data = json.loads(message)
+        if data["type"] == "warning" and data["content"] == "Near hazard":
+            robot_id = data["robot_id"]
+            robot_position = (data["position"]["x"], data["position"]["y"])
+
+            # Check if the robot is near any hazards
+            for hazard in hazards:
+                if not hazard.found:
+                    distance = math.hypot(hazard.x - robot_position[0], hazard.y - robot_position[1])
+                    if distance < 0.3:  # Assuming 0.5 as the threshold for being 'near'
+                        print(f"Robot {robot_id} found hazard at position: ({hazard.x}, {hazard.y})")
+                        hazard.found = True  # Mark the hazard as found
+
     # Update goal manager with current robot positions
-    robot_data = []
+
     for robot in robots:
         translation_field = robot.getField("translation")
         rotation_field = robot.getField("rotation")
@@ -293,16 +406,17 @@ while supervisor.step(timestep) != -1:
     robot_positions = [robot.getField("translation").getSFVec3f() for robot in robots]
     goal_manager.update_goals(robot_data,box_positions)
     goals = goal_manager.get_goals()
-    #goals = [(0.5, 0.5, 'explore')]
-    draw_on_display(display, box_positions, robot_positions, goals, WALLS)
+
+    draw_on_display(display, box_positions, robot_positions, goals, WALLS, hazards)
     # Check if it's time to send data
     if current_time - last_send_time >= send_interval:
         # Plot the environment
-        plot_environment(box_positions, robot_positions, goals, WALLS, has_started)
+        plot_environment(box_positions, robot_positions, goals, hazards, WALLS, has_started)
         has_started=False
 
         box_positions = [{"x": pos[0], "y": pos[1], "z": pos[2]} for pos in [wooden_box.getField("translation").getSFVec3f() for wooden_box in wooden_boxes]]
-        
+        hazard_data = [{"x": hazard.x, "y": hazard.y} for hazard in hazards]
+
         robot_positions = []
         robot_rotations = []
         robot_channels = []
@@ -324,7 +438,7 @@ while supervisor.step(timestep) != -1:
 
         # Include goals in the message
         goals = goal_manager.get_goals()
-        #goals = [(-0.5, -0.5, 'explore'),(0.5, 0.5, 'explore')]
+
         goal_data = [{"x": x, "y": y, "type": t} for x, y, t in goals]
 
         # Combine box positions, robot positions, and goals into a single message
@@ -335,6 +449,7 @@ while supervisor.step(timestep) != -1:
                 "Boxes": box_positions,
                 "Robots": [{"x": pos[0], "y": pos[1], "z": pos[2]} for pos in filtered_positions.values()],
                 "Goals": goal_data,
+                "Hazards": hazard_data,
                 "Current": {
                     "position": {
                         "x": robot_position_dict[channel][0],

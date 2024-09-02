@@ -11,6 +11,9 @@ class RobotController:
         self.receiver = self.robot.getDevice("receiver")
         self.receiver.enable(self.timestep)
 
+        self.emitter = self.robot.getDevice("emitter")
+        self.emitter.setChannel(100)
+
         #self.camera = self.robot.getDevice("camera")
         #self.camera.enable(self.timestep)
         
@@ -30,6 +33,7 @@ class RobotController:
             'WALL_REPELLING_RADIUS': 0.2,
             'GOAL_ATTRACTIVE_GAIN': 50.0,
             'GOAL_ATTRACTIVE_RADIUS': 0.4,
+            'HAZARD_DETECTION_RADIUS': 0.3,
             'MAX_VELOCITY': 6.28,
             'MAX_FORCE': 10000000.0,
             'DAMPING_FACTOR': 0.1,
@@ -145,6 +149,7 @@ class RobotController:
         
         # Parse positions and rotations
         box_positions = [(box['x'], box['y'], box['z']) for box in data.get("Boxes", [])]
+        hazard_positions = [(box['x'], box['y']) for box in data.get("Hazards", [])]
         robot_positions = [(robot['x'], robot['y'], robot['z']) for robot in data.get("Robots", [])]
         goal_positions = [(goal['x'], goal['y']) for goal in data.get("Goals", [])]  # Extract goals from message
         current_position = (
@@ -156,7 +161,7 @@ class RobotController:
             data["Current"]["rotation"]["z"] * data["Current"]["rotation"]["w"]
         )
         
-        return box_positions, robot_positions, goal_positions, current_position, current_rotation
+        return box_positions, robot_positions, goal_positions, hazard_positions, current_position, current_rotation
 
     def update_motors(self, left_velocity, right_velocity):
         self.left_motor.setVelocity(left_velocity)
@@ -203,6 +208,24 @@ class RobotController:
         plt.title('Artificial Potential Field - 2D')
         plt.grid(True)
         plt.show()
+    
+    def is_near_hazard(self, current_position, hazard_positions, radius):
+        for hx, hy in hazard_positions:
+            distance = math.hypot(hx - current_position[0], hy - current_position[1])
+            if distance < radius:
+                return True
+        return False
+    
+    def emit_warning(self, robot_id, current_position):
+        warning_message = {
+            "type": "warning",
+            "content": "Near hazard",
+            "robot_id": robot_id,
+            "position": {"x": current_position[0], "y": current_position[1], "z": current_position[2]}
+        }
+        json_message = json.dumps(warning_message)
+        self.emitter.send(json_message.encode('utf-8'))
+        print(f"Emitted warning: {json_message}")
 
 
 if __name__ == "__main__":
@@ -213,7 +236,7 @@ if __name__ == "__main__":
             message = controller.receiver.getString()
             controller.receiver.nextPacket()
             
-            box_positions, robot_positions, goal_positions, current_position, current_rotation = controller.process_message(message)
+            box_positions, robot_positions, goal_positions, hazard_positions, current_position, current_rotation = controller.process_message(message)
 
             repulsive_x_robots, repulsive_y_robots = controller.repulsive_potential_from_robots(robot_positions, current_position, controller.params['ROBOT_REPELLING_RADIUS'])
             repulsive_x_boxes, repulsive_y_boxes = controller.repulsive_potential_from_boxes(box_positions, current_position, controller.params['BOX_REPELLING_RADIUS'])
@@ -238,6 +261,10 @@ if __name__ == "__main__":
 
             left_velocity, right_velocity = controller.compute_velocities_from_forces(total_force_x, total_force_y, current_rotation)
             controller.update_motors(left_velocity, right_velocity)
+
+            if controller.is_near_hazard(current_position, hazard_positions, controller.params['HAZARD_DETECTION_RADIUS']):
+                robot_id = controller.receiver.getChannel()  # Get the robot's ID
+                controller.emit_warning(robot_id, current_position)
 
             # Uncomment the line below to visualize the potential field
             # controller.plot_apf_2d(robot_positions, box_positions, controller.WALLS, current_position, goal_positions)
