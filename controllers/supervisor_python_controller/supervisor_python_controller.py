@@ -224,16 +224,32 @@ def plot_environment(box_positions, robot_positions, goals, hazards, walls, has_
         plot_environment.fig, plot_environment.ax = plt.subplots(figsize=(10, 10))
         
         # Plot walls
+        # Determine the extents of the walls
+        all_x = []
+        all_y = []
         for wall_start, wall_end in walls:
             wall_x = [wall_start[0], wall_end[0]]
             wall_y = [wall_start[1], wall_end[1]]
             plot_environment.ax.plot(wall_x, wall_y, 'k-', linewidth=2, label='Wall')
+            all_x.extend(wall_x)
+            all_y.extend(wall_y)
+
+        # Set axis limits to fit the walls exactly
+        plot_environment.ax.set_xlim(min(all_x), max(all_x))
+        plot_environment.ax.set_ylim(min(all_y), max(all_y))
         
         # Initialize plots for boxes, robots, goals, and hazards
         plot_environment.box_plots = [plot_environment.ax.plot([], [], 's', markersize=10, color='brown', label='Box')[0] for _ in box_positions]
         plot_environment.robot_plots = [plot_environment.ax.plot([], [], 'o', markersize=8, color='blue', label='Robot')[0] for _ in robot_positions]
         plot_environment.goal_plots = [plot_environment.ax.plot([], [], 'x', markersize=10, color='red', label='Goal')[0] for _ in goals]
         plot_environment.hazard_plots = [plot_environment.ax.plot([], [], 'D', markersize=8, color='purple', label='Undetected Hazard')[0] for _ in hazards]
+
+        # Initialize detection range circles
+        plot_environment.detection_circles = []
+        for robot in robot_positions:
+            circle = patches.Circle((0, 0), 0.3, color='blue', alpha=0.3, label='Detection Range')
+            plot_environment.ax.add_patch(circle)
+            plot_environment.detection_circles.append(circle)
 
         plot_environment.ax.set_xlabel('X Coordinate')
         plot_environment.ax.set_ylabel('Y Coordinate')
@@ -262,6 +278,8 @@ def plot_environment(box_positions, robot_positions, goals, hazards, walls, has_
     # Update robot positions
     for i, robot in enumerate(robot_positions):
         plot_environment.robot_plots[i].set_data([robot[0]], [robot[1]])
+        plot_environment.detection_circles[i].center = (robot[0], robot[1])
+
     
     # Update goal positions
     for i, goal in enumerate(goals):
@@ -285,7 +303,6 @@ def plot_environment(box_positions, robot_positions, goals, hazards, walls, has_
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     plot_environment.ax.legend(by_label.values(), by_label.keys(), loc='lower right')
-
     plt.draw()
     plt.pause(0.1)
 
