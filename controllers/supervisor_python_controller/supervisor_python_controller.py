@@ -5,6 +5,7 @@ import numpy as np
 import math
 import json
 import random
+import os
 
 # Helper functions
 def find_all_wooden_boxes(node, boxes):
@@ -43,13 +44,14 @@ class Hazard:
         self.y = y
         self.creation_timestep = creation_timestep
         self.found = False
+        self.found_time = None
 
 def initialize_hazards(supervisor, walls, boxes, robots, num_hazards=3):
     hazards = []
-    hazard_min_distance = 0.6  # Minimum distance between hazards
+    hazard_min_distance = 0.4  # Minimum distance between hazards
     hazard_placement_threshold = 0.1  # Minimum distance from walls for hazard placement
-    box_min_distance=0.2
-    robot_min_distance=0.5
+    box_min_distance=0.1
+    robot_min_distance=0.3
 
     def is_near_wall(x, y):
         for wall_start, wall_end in walls:
@@ -106,7 +108,7 @@ class Goal:
 
 # Goal Manager class to handle goal placement and removal
 class GoalManager:
-    def __init__(self, supervisor, walls, goal_timeout=15, max_goals=15):
+    def __init__(self, supervisor, walls, goal_timeout=10, max_goals=15):
         self.supervisor = supervisor
         self.goals = []
         self.walls = walls
@@ -178,7 +180,7 @@ class GoalManager:
                     and not self.is_near_robot(x, y, robots, self.robot_min_distance) and not self.is_near_obstacle(x, y, obstacles)):
                     self.add_goal(x, y, 'explore', robots, obstacles)
 
-        print(f"Debug: Updated Goals - Total: {len(self.goals)}")
+        #print(f"Debug: Updated Goals - Total: {len(self.goals)}")
 
     def get_goals(self):
         # Return goal data in the expected format
@@ -371,22 +373,47 @@ def draw_on_display(display, box_positions, robot_positions, goals, walls, hazar
     display.setColor(COLOR_EXTRA)
     display.drawPixel(0, 0)
 
+def load_existing_hazard_data(file_path):
+    # Check if file exists
+    if not os.path.exists(file_path):
+        print(f"{file_path} does not exist. Creating a new file.")
+        # Create a new file with empty data
+        with open(file_path, 'w') as json_file:
+            json.dump([], json_file, indent=4)  # Write an empty list to the file
+        return []
+    
+    # If file exists, load data
+    with open(file_path, 'r') as json_file:
+        try:
+            # Ensure file is not empty before parsing
+            if os.path.getsize(file_path) > 0:
+                return json.load(json_file)
+            else:
+                print(f"Warning: {file_path} is empty.")
+                return []
+        except json.JSONDecodeError:
+            print(f"Error: Failed to parse JSON from {file_path}")
+            return []
 
 # Main loop
+json_file_path = 'hazard_detection_times.json'
+#hazard_results = load_existing_hazard_data(json_file_path)
+
 timestep = int(supervisor.getBasicTimeStep())
 last_send_time = 0
 send_interval = 1000  # 1 second
 has_started=True
-box_positions = [wooden_box.getField("translation").getSFVec3f() for wooden_box in wooden_boxes]
-robot_data = []
-for robot in robots:
-    translation_field = robot.getField("translation")
-    rotation_field = robot.getField("rotation")
-    if translation_field and rotation_field:
-        position = translation_field.getSFVec3f()
-        rotation = rotation_field.getSFRotation()
-        robot_data.append({"position": position, "rotation": rotation})
-hazards = initialize_hazards(supervisor,WALLS,box_positions,robot_data)
+hazards_set=False
+#box_positions = [wooden_box.getField("translation").getSFVec3f() for wooden_box in wooden_boxes]
+#robot_data = []
+#for robot in robots:
+#    translation_field = robot.getField("translation")
+#    rotation_field = robot.getField("rotation")
+#    if translation_field and rotation_field:
+#        position = translation_field.getSFVec3f()
+#        rotation = rotation_field.getSFRotation()
+#        robot_data.append({"position": position, "rotation": rotation})
+#hazards = initialize_hazards(supervisor,WALLS,box_positions,robot_data)
 while supervisor.step(timestep) != -1:
     current_time = supervisor.getTime() * 1000
 
@@ -405,9 +432,10 @@ while supervisor.step(timestep) != -1:
                     if distance < 0.3:  # Assuming 0.5 as the threshold for being 'near'
                         print(f"Robot {robot_id} found hazard at position: ({hazard.x}, {hazard.y})")
                         hazard.found = True  # Mark the hazard as found
+                        hazard.found_time = current_time
 
     # Update goal manager with current robot positions
-
+    robot_data = []
     for robot in robots:
         translation_field = robot.getField("translation")
         rotation_field = robot.getField("rotation")
@@ -423,13 +451,16 @@ while supervisor.step(timestep) != -1:
     robot_positions = [robot.getField("translation").getSFVec3f() for robot in robots]
     goal_manager.update_goals(robot_data,box_positions)
     goals = goal_manager.get_goals()
+    if(not hazards_set):
+        hazards = initialize_hazards(supervisor,WALLS,box_positions,robot_data)
+        hazards_set = True
 
     draw_on_display(display, box_positions, robot_positions, goals, WALLS, hazards)
     # Check if it's time to send data
     if current_time - last_send_time >= send_interval:
         # Plot the environment
-        plot_environment(box_positions, robot_positions, goals, hazards, WALLS, has_started)
-        has_started=False
+        #plot_environment(box_positions, robot_positions, goals, hazards, WALLS, has_started)
+        #has_started=False
 
         box_positions = [{"x": pos[0], "y": pos[1], "z": pos[2]} for pos in [wooden_box.getField("translation").getSFVec3f() for wooden_box in wooden_boxes]]
         hazard_data = [{"x": hazard.x, "y": hazard.y} for hazard in hazards]
@@ -489,5 +520,31 @@ while supervisor.step(timestep) != -1:
 
             print(f"Sent JSON data to channel {channel}: {json_message}")
             
+        if all(hazard.found for hazard in hazards):
+                hazard_results = load_existing_hazard_data(json_file_path)
+
+                # Calculate the time it took for each hazard to be found
+                for hazard in hazards:
+                    time_to_find = hazard.found_time - (hazard.creation_timestep * 1000)  # Convert creation timestep to milliseconds
+                    hazard_results.append({
+                        "x": hazard.x,
+                        "y": hazard.y,
+                        "creation_time": hazard.creation_timestep,
+                        "found_time": hazard.found_time,
+                        "time_to_find": time_to_find
+                    })
+
+                # Save the updated results to the JSON file
+                with open(json_file_path, 'w') as json_file:
+                    json.dump(hazard_results, json_file, indent=4)
+
+                print(f"All hazards found. Results saved to {json_file_path}")
+                hazards_set=False
+                supervisor.worldLoad("../../worlds/e-puck2_pi-puck.wbt")
+                #supervisor.simulationReset()
+                #for robot in robots:
+                #    robot.restartController()  # Restart the robot's controller process
+                
+                continue
 
         last_send_time = current_time
